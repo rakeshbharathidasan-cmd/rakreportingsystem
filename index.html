@@ -365,6 +365,12 @@ body.open #view,body.open nav{pointer-events:none}
 @media(max-width:370px){.brand b{font-size:12px!important}.icon-btn{width:33px;height:33px}}
 
 .fab svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:2.8;stroke-linecap:round}
+
+.heat.h5 th.bk,.heat.h5 td.bk{width:21%}
+.hc.td{background:rgba(124,92,255,.26);box-shadow:inset 0 0 0 1px rgba(160,140,255,.55);color:#fff;line-height:1.15}.hc.td small{display:block;font-size:8.5px;font-weight:600;color:#cfc6ff}
+.hc.nt{background:rgba(255,255,255,.06);color:var(--text)}
+.heat.h5 .hc{font-size:10.5px;letter-spacing:-.3px}
+.heat.h5 th.bk,.heat.h5 td.bk{width:24%}.heat.h5 td.bk b{font-size:12px}
 </style>
 <style id="lookCss"></style><style id="btnCss"></style>
 </head>
@@ -443,21 +449,25 @@ function morCalc(k){
   const row = ([id, n]) => { const v = mval(r, id), d = x => x && v != null && mval(x, id) != null ? v - mval(x, id) : null; return {id, n, v, dod:d(P), mtd:d(RM), qtd:d(RQ), ytd:d(RY), bm:RM ? mval(RM, id) : null, bq:RQ ? mval(RQ, id) : null, by:RY ? mval(RY, id) : null}; };
   const same = [1, 2, 3].map(n => { const sk = sameBackM(k, n); return sk ? {k:sk, v:mval(S.mor[sk], 'ts'), d:mval(r, 'ts') - mval(S.mor[sk], 'ts')} : null; });
   const sma = MB.map(row).concat([row(['ts', 'Total SMA'])]), r9any = [r, P, RM, RQ, RY].some(x => x && +x.r9);
-  const npa = r9any ? NB.map(row).concat([row(['tn', 'Total NPA'])]) : [row(['tn', 'NPA'])];
+  const npa = NB.map(row).concat([row(['tn', 'Total NPA'])]);
   return {k, r, B, pv, sma, npa, RM, RQ, RY, same};
 }
 /* ---------- evening ---------- */
 const totCats = () => S.cats.filter(c => c.tot);
 const eTot = r => !r ? null : totCats().reduce((a, c) => a + (+(r.v[c.id] || [0])[0] || 0), 0);
-const eAc = r => !r ? null : totCats().reduce((a, c) => a + (+(r.v[c.id] || [0, 0])[1] || 0), 0);
+const eAcN = r => !r ? 0 : totCats().reduce((a, c) => a + (+(r.v[c.id] || [0, 0])[1] || 0), 0);
 const eAmt = (r, id) => !r ? null : +((r.v[id] || [0])[0]) || 0;
-const eCnt = (r, id) => !r ? null : +((r.v[id] || [0, 0])[1]) || 0;
+const eCntN = (r, id) => !r ? 0 : +((r.v[id] || [0, 0])[1]) || 0;
+const eCnt = (r, id) => !r ? null : r.noac ? '—' : eCntN(r, id);
+const eAc = r => !r ? null : r.noac ? '—' : eAcN(r);
+const catsOf = r => S.cats.filter(c => !r || !r.imp || (c.id in r.v));
+const acS = n => n === '—' || n == null ? '' : ` · ${n} a/c`;
 const prevEveK = k => keys(S.eve).filter(x => x < k).pop() || null;
 function sameBackM(k, months){ const d = pk(k), t = new Date(d.getFullYear(), d.getMonth() - months, 1), last = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate(); t.setDate(Math.min(d.getDate(), last)); const tk = dk(t); return keys(S.mor).filter(x => ym(x) === ym(tk) && x <= tk).pop() || null; }
 function nearOn(target){ const y = ym(target); return keys(S.eve).filter(x => ym(x) === y && x <= target).pop() || null; }
 function sameBack(k, months){ const d = pk(k), t = new Date(d.getFullYear(), d.getMonth() - months, 1), last = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate(); t.setDate(Math.min(d.getDate(), last)); return nearOn(dk(t)); }
 function eveCalc(k){ const r = S.eve[k]; if (!r) return null; return {k, r, cmp:[['Prev day', prevEveK(k)], ['Last month', sameBack(k, 1)], ['Last qtr', sameBack(k, 3)]], tot:eTot(r), ac:eAc(r), mtd:mtdRed(k)}; }
-function mtdRed(k){ const ks = keys(S.eve).filter(x => ym(x) === ym(k) && x <= k); return {sum:ks.reduce((a, x) => a + eTot(S.eve[x]), 0), ac:ks.reduce((a, x) => a + eAc(S.eve[x]), 0), n:ks.length, days:ks}; }
+function mtdRed(k){ const ks = keys(S.eve).filter(x => ym(x) === ym(k) && x <= k); return {sum:ks.reduce((a, x) => a + eTot(S.eve[x]), 0), ac:ks.reduce((a, x) => a + eAcN(S.eve[x]), 0), n:ks.length, days:ks}; }
 const totLabel = () => totCats().map(c => c.n.replace(/^SMA\s*/i, '')).join('+') ? 'SMA ' + totCats().map(c => c.n.replace(/^SMA\s*/i, '')).join('+') : 'Total';
 /* ---------- colours ---------- */
 const goodOf = (d, kind) => S.settings.colour === 'sign' ? d > 0 : kind === 'risk' ? d < 0 : d > 0;
@@ -465,6 +475,7 @@ const arrow = d => Math.abs(d) < .005 ? '•' : d > 0 ? '▲' : '▼';
 const clr = (d, kind) => d == null || Math.abs(d) < .005 ? 'var(--muted)' : goodOf(d, kind) ? 'var(--gd)' : 'var(--bd)';
 const dl = (d, kind) => d == null ? '<span class="muted">—</span>' : `<span class="dl" style="color:${clr(d, kind)}">${arrow(d)} ${f2(Math.abs(d))}</span>`;
 function heatBg(d, kind, mx){ if (d == null) return ['rgba(255,255,255,.035)', 'var(--faint)']; if (Math.abs(d) < .005) return ['rgba(255,255,255,.05)', 'var(--muted)']; const a = (.14 + .7 * Math.min(1, Math.abs(d) / (mx || 1))).toFixed(2); return [goodOf(d, kind) ? `rgba(34,211,154,${a})` : `rgba(255,95,114,${a})`, '#fff']; }
+const tcell = (v, sub) => `<td><div class="hc td">${v}${sub ? `<small>${sub}</small>` : ''}</div></td>`, ncell = v => `<td><div class="hc nt">${v}</div></td>`;
 const hcell = (d, kind, mx) => { const [b, c] = heatBg(d, kind, mx); return `<td><div class="hc" style="background:${b};color:${c}">${d == null ? '—' : arrow(d) + f2(Math.abs(d))}</div></td>`; };
 
 /* ===================== render ===================== */
@@ -494,7 +505,7 @@ function renderHome(){
     ${tileHtml('stats', keys(S.mor).length + keys(S.eve).length + ' reports', 'Trends · history', 3)}</div>`;
   if (M) { const best = M.sma.slice(0, 3).filter(x => x.dod != null).sort((a, b) => (goodOf(a.dod, 'risk') ? -Math.abs(a.dod) : Math.abs(a.dod)) - (goodOf(b.dod, 'risk') ? -Math.abs(b.dod) : Math.abs(b.dod)))[0];
     h += `<section class="card"><div class="ch"><h3>Position · ${short(mk)}</h3><button class="lnk" data-act="go" data-t="mor">Open ›</button></div>${heatTable(M, true)}</section>`; }
-  if (Ev) h += `<section class="card"><div class="ch"><h3>Reduction · ${short(ek)}</h3><button class="lnk" data-act="go" data-t="eve">Open ›</button></div><div class="ebig"><b class="num">${f2(Ev.tot)}</b> <span class="muted">Cr · ${Ev.ac} a/c</span></div>${S.cats.map(c => `<div class="erow"><span>${c.e} ${esc(c.n)}</span><b class="num">${f2(eAmt(Ev.r, c.id))}</b><small class="muted">${eCnt(Ev.r, c.id)} a/c</small></div>`).join('')}</section>`;
+  if (Ev) h += `<section class="card"><div class="ch"><h3>Reduction · ${short(ek)}</h3><button class="lnk" data-act="go" data-t="eve">Open ›</button></div><div class="ebig"><b class="num">${f2(Ev.tot)}</b> <span class="muted">Cr · ${Ev.ac} a/c</span></div>${catsOf(Ev.r).map(c => `<div class="erow"><span>${c.e} ${esc(c.n)}</span><b class="num">${f2(eAmt(Ev.r, c.id))}</b><small class="muted">${eCnt(Ev.r, c.id)} a/c</small></div>`).join('')}</section>`;
   const acts = keys(S.mor).map(x => ({t:S.mor[x].t, k:x, m:'mor'})).concat(keys(S.eve).map(x => ({t:S.eve[x].t, k:x, m:'eve'}))).sort((a, b) => b.t - a.t).slice(0, 5);
   if (acts.length) h += `<section class="card"><div class="ch"><h3>Recent entries</h3></div>${acts.map(a => `<button class="hrow" data-act="open" data-m="${a.m}" data-k="${a.k}"><span class="e">${a.m === 'mor' ? '🌅' : '🌇'}</span><span><b>${a.m === 'mor' ? 'Morning position' : 'Evening reduction'} · ${short(a.k)}</b><small class="faint">saved ${short(dk(new Date(a.t)))} · ${hm(a.t)}</small></span><b class="num">${f2(a.m === 'mor' ? mval(S.mor[a.k], 'ts') : eTot(S.eve[a.k]))}</b></button>`).join('')}</section>`;
   else h += `<div class="empty"><span class="e">📋</span>No reports yet.<br>Tap <b>＋</b> to enter this morning's figures, or import your starter backup from ⚙️ Settings.</div>`;
@@ -503,15 +514,15 @@ function renderHome(){
 function heatTable(M, compact){
   const all = M.sma.concat(M.npa), mx = Math.max(.01, ...all.flatMap(r => [r.dod, r.mtd, r.qtd, r.ytd]).filter(x => x != null).map(Math.abs));
   const hd = (l, s) => `<th>${l}${compact ? '' : `<small>${s}</small>`}</th>`;
-  const tr = r => `<tr class="${/^Total|^NPA$/.test(r.n) ? 'tot' : ''}"><td class="bk"><b>${r.n}</b><small class="num">${f2(r.v)}</small></td>${hcell(r.dod, 'risk', mx)}${hcell(r.mtd, 'risk', mx)}${hcell(r.qtd, 'risk', mx)}${hcell(r.ytd, 'risk', mx)}</tr>`;
-  return `<table class="heat"><tr><th class="bk">Bucket</th>${hd('DoD', M.pv ? 'vs ' + short(M.pv) : 'no prev')}${hd('MTD', 'vs ' + ymLab(M.B.m))}${hd('QTD', 'vs ' + ymLab(M.B.q))}${hd('YTD', 'vs ' + ymLab(M.B.y))}</tr>${M.sma.map(tr).join('')}<tr class="gap"><td colspan="5"></td></tr>${M.npa.map(tr).join('')}</table>`;
+  const tr = r => `<tr class="${/^Total|^NPA$/.test(r.n) ? 'tot' : ''}"><td class="bk"><b>${r.n.replace('Total SMA', 'Total').replace('Total NPA', 'Tot. NPA')}</b></td>${tcell(r.v == null ? '—' : f2(r.v))}${hcell(r.ytd, 'risk', mx)}${hcell(r.qtd, 'risk', mx)}${hcell(r.mtd, 'risk', mx)}${hcell(r.dod, 'risk', mx)}</tr>`;
+  return `<table class="heat h5"><tr><th class="bk">Bucket</th>${hd('Today', '₹ Cr')}${hd('YTD', 'vs ' + ymLab(M.B.y))}${hd('QTD', 'vs ' + ymLab(M.B.q))}${hd('MTD', 'vs ' + ymLab(M.B.m))}${hd('GDD', M.pv ? 'vs ' + short(M.pv) : 'no prev')}</tr>${M.sma.map(tr).join('')}<tr class="gap"><td colspan="6"></td></tr>${M.npa.map(tr).join('')}</table>`;
 }
 function renderMor(){
   const k = UI.mk || (S.mor[today()] ? today() : prevMorK(addK(today(), 1)) || today()); UI.mk = k; const M = morCalc(k);
   let h = dateBar(k, 'mday');
   if (!M) return h + `<div class="empty"><span class="e">🌅</span>No morning figures for ${short(k)}.<button class="btn pri" style="margin-top:14px" data-act="morentry" data-k="${k}">＋ Enter morning figures</button></div>` + refsCard(k);
   const T = M.sma[3], N = M.npa[M.npa.length - 1];
-  h += `<div class="kp3"><div class="kq"><div class="lbl">Total SMA</div><b class="num">${f2(T.v)}</b><div>${dl(T.dod, 'risk')} <small class="muted">DoD</small></div></div><div class="kq"><div class="lbl">vs ${ymLab(M.B.y)}</div><b class="num">${T.by == null ? '—' : f2(T.by)}</b><div>${dl(T.ytd, 'risk')} <small class="muted">YTD</small></div></div><div class="kq"><div class="lbl">NPA</div><b class="num">${f2(N.v)}</b><div>${dl(N.dod, 'risk')} <small class="muted">DoD</small></div></div></div>`;
+  h += `<div class="kp3"><div class="kq"><div class="lbl">Total SMA</div><b class="num">${f2(T.v)}</b><div>${dl(T.dod, 'risk')} <small class="muted">GDD</small></div></div><div class="kq"><div class="lbl">vs ${ymLab(M.B.y)}</div><b class="num">${T.by == null ? '—' : f2(T.by)}</b><div>${dl(T.ytd, 'risk')} <small class="muted">YTD</small></div></div><div class="kq"><div class="lbl">NPA</div><b class="num">${N.v == null ? '—' : f2(N.v)}</b><div>${dl(N.dod, 'risk')} <small class="muted">GDD</small></div></div></div>`;
   h += `<section class="card">${heatTable(M)}<div class="legend2"><span>${S.settings.colour === 'sign' ? 'Minus' : 'Adverse'}</span><i></i><span>${S.settings.colour === 'sign' ? 'Plus' : 'Favourable'}</span></div>
     <div class="acts"><button class="btn" data-act="morentry" data-k="${k}">✏️ Edit</button><button class="btn pri" data-act="share" data-m="mor" data-k="${k}">🖼️ Share image</button></div>
     <div class="small faint" style="margin-top:8px">Saved ${short(dk(new Date(M.r.t)))} · ${hm(M.r.t)}${S.shared['m' + k] ? ` · shared ${hm(S.shared['m' + k])}` : ''}</div></section>`;
@@ -528,16 +539,18 @@ function renderEve(){
   let h = dateBar(k, 'eday');
   if (!Ev) return h + `<div class="empty"><span class="e">🌇</span>No reduction figures for ${short(k)}.<button class="btn pri" style="margin-top:14px" data-act="eveentry" data-k="${k}">＋ Enter evening figures</button></div>`;
   h += `<div class="seg" style="margin-bottom:12px"><button class="${mode === 'compare' ? 'on' : ''}" data-act="evmode" data-v="compare">📊 Compare</button><button class="${mode === 'actual' ? 'on' : ''}" data-act="evmode" data-v="actual">📋 Actual only</button></div>`;
-  h += `<div class="kp2"><div class="kq big"><div class="lbl">Reduced · ${esc(totLabel())}</div><b class="num">${f2(Ev.tot)}</b><div class="small muted">${Ev.ac} accounts</div></div><div class="kq"><div class="lbl">Month to date</div><b class="num">${f2(Ev.mtd.sum)}</b><div class="small muted">${Ev.mtd.n} day${Ev.mtd.n === 1 ? '' : 's'} · ${Ev.mtd.ac} a/c</div></div></div>`;
+  { const av = Ev.mtd.n ? Ev.mtd.sum / Ev.mtd.n : null, dAv = av != null && Ev.mtd.n > 1 ? Ev.tot - av : null, acOk = Ev.ac !== '—', CT = catsOf(Ev.r), top = CT.slice().sort((a, b) => eAmt(Ev.r, b.id) - eAmt(Ev.r, a.id))[0];
+    h += mode === 'compare' ? `<div class="kp3"><div class="kq"><div class="lbl">Reduced</div><b class="num">${f2(Ev.tot)}</b><div class="muted">${acOk ? Ev.ac + ' a/c' : esc(totLabel())}</div></div><div class="kq"><div class="lbl">MTD</div><b class="num">${f2(Ev.mtd.sum)}</b><div class="muted">${Ev.mtd.n} day${Ev.mtd.n === 1 ? '' : 's'}</div></div><div class="kq"><div class="lbl">Avg/day</div><b class="num">${av == null ? '—' : f2(av)}</b><div>${dAv == null ? '<span class="muted">1st day</span>' : 'today ' + dl(dAv, 'rec')}</div></div></div>`
+      : `<div class="kp3"><div class="kq"><div class="lbl">Reduced</div><b class="num">${f2(Ev.tot)}</b><div class="muted">${esc(totLabel())}</div></div><div class="kq"><div class="lbl">Accounts</div><b class="num">${acOk ? Ev.ac : '—'}</b><div class="muted">${acOk ? 'in total' : 'not recorded'}</div></div><div class="kq"><div class="lbl">Top</div><b class="num">${top ? f2(eAmt(Ev.r, top.id)) : '—'}</b><div class="muted">${top ? esc(top.n) : ''}</div></div></div>`; }
   if (mode === 'compare') {
-    const rows = S.cats.map(c => ({n:c.n, e:c.e, v:eAmt(Ev.r, c.id), a:eCnt(Ev.r, c.id), d:Ev.cmp.map(([, ck]) => ck ? eAmt(Ev.r, c.id) - eAmt(S.eve[ck], c.id) : null)})).concat([{n:'Total', e:'Σ', v:Ev.tot, a:Ev.ac, d:Ev.cmp.map(([, ck]) => ck ? Ev.tot - eTot(S.eve[ck]) : null), tot:true}]);
+    const rows = catsOf(Ev.r).map(c => ({n:c.n, e:c.e, v:eAmt(Ev.r, c.id), a:eCnt(Ev.r, c.id), d:Ev.cmp.map(([, ck]) => ck ? eAmt(Ev.r, c.id) - eAmt(S.eve[ck], c.id) : null)})).concat([{n:'Total', e:'Σ', v:Ev.tot, a:Ev.ac, d:Ev.cmp.map(([, ck]) => ck ? Ev.tot - eTot(S.eve[ck]) : null), tot:true}]);
     const mx = Math.max(.01, ...rows.flatMap(r => r.d).filter(x => x != null).map(Math.abs));
-    h += `<section class="card"><table class="heat"><tr><th class="bk">Category</th>${Ev.cmp.map(([l, ck]) => `<th>${l}<small>${ck ? short(ck) : 'no data'}</small></th>`).join('')}</tr>${rows.map(r => `<tr class="${r.tot ? 'tot' : ''}"><td class="bk"><b>${esc(r.n)}</b><small class="num">${f2(r.v)} · ${r.a} a/c</small></td>${r.d.map(d => hcell(d, 'rec', mx)).join('')}</tr>`).join('')}</table>
+    h += `<section class="card"><table class="heat h5"><tr><th class="bk">Category</th><th>Today<small>₹ Cr</small></th>${Ev.cmp.map(([l, ck]) => `<th>${({'Prev day':'Prev', 'Last month':'Month', 'Last qtr':'Qtr'})[l]}<small>${ck ? short(ck) : 'no data'}</small></th>`).join('')}</tr>${rows.map(r => `<tr class="${r.tot ? 'tot' : ''}"><td class="bk"><b>${esc(r.n)}</b></td>${tcell(f2(r.v), r.a === '—' ? '' : r.a + ' a/c')}${r.d.map(d => hcell(d, 'rec', mx)).join('')}</tr>`).join('')}</table>
       <div class="legend2"><span>${S.settings.colour === 'sign' ? 'Minus' : 'Lower than'}</span><i></i><span>${S.settings.colour === 'sign' ? 'Plus' : 'Higher than'}</span></div>
       ${Ev.cmp.every(([, ck]) => !ck) ? '<div class="note">No earlier reports yet, so there is nothing to compare. Use <b>Actual only</b> for now — comparisons fill in as days are logged.</div>' : ''}`;
   } else {
-    const mx = Math.max(.01, ...S.cats.map(c => eAmt(Ev.r, c.id)));
-    h += `<section class="card">${S.cats.map(c => `<div class="abar"><div class="row"><b>${c.e} ${esc(c.n)}${c.tot ? '' : ' <small class="faint">(not in total)</small>'}</b><span><b class="num">${f2(eAmt(Ev.r, c.id))}</b> <small class="muted">Cr · ${eCnt(Ev.r, c.id)} a/c</small></span></div><div class="pbar"><i style="width:${(eAmt(Ev.r, c.id) / mx * 100).toFixed(1)}%"></i></div></div>`).join('')}`;
+    const acOk = Ev.ac !== '—';
+    h += `<section class="card"><table class="heat h5"><tr><th class="bk">Category</th><th>Today<small>₹ Cr</small></th><th>Accounts<small>No.</small></th><th>Share<small>of total</small></th></tr>${catsOf(Ev.r).map(c => `<tr><td class="bk"><b>${esc(c.n)}</b></td>${tcell(f2(eAmt(Ev.r, c.id)))}${ncell(acOk ? eCnt(Ev.r, c.id) : '—')}${ncell(Ev.tot ? Math.round(eAmt(Ev.r, c.id) / Ev.tot * 100) + '%' : '—')}</tr>`).join('')}<tr class="tot"><td class="bk"><b>Total</b></td>${tcell(f2(Ev.tot))}${ncell(acOk ? Ev.ac : '—')}${ncell('100%')}</tr></table>`;
   }
   h += `<div class="acts"><button class="btn" data-act="eveentry" data-k="${k}">✏️ Edit</button><button class="btn pri" data-act="share" data-m="eve" data-k="${k}">🖼️ Share image</button></div>
     <div class="small faint" style="margin-top:8px">Saved ${short(dk(new Date(Ev.r.t)))} · ${hm(Ev.r.t)}${S.shared['e' + k] ? ` · shared ${hm(S.shared['e' + k])}` : ''}</div></section>`;
@@ -549,17 +562,17 @@ function renderStats(){
   let h = `<div class="seg" style="margin-bottom:12px">${[['mtd', 'Month'], ['90', '90 days'], ['fy', 'This FY'], ['all', 'All']].map(([v, l]) => `<button class="${UI.range === v ? 'on' : ''}" data-act="range" data-v="${v}">${l}</button>`).join('')}</div>`;
   if (!mk.length && !ek.length) return h + '<div class="empty"><span class="e">📊</span>Stats appear once you have a few reports.</div>' + histCard();
   const tots = ek.map(x => eTot(S.eve[x])), sum = tots.reduce((a, b) => a + b, 0), best = ek.length ? ek[tots.indexOf(Math.max(...tots))] : null;
-  h += `<div class="kpis">${[['Total reduced', f2(sum), ek.length + ' days'], ['Avg / day', ek.length ? f2(sum / ek.length) : '—', 'Cr'], ['Best day', best ? f2(eTot(S.eve[best])) : '—', best ? longDay(best).slice(0, -5) : ''], ['Accounts', ek.reduce((a, x) => a + eAc(S.eve[x]), 0), 'reduced']].map(([l, v, s2], i) => `<div class="kpi" style="--c:${PAL[i]}"><div class="k">${l}</div><div class="v num">${v}</div><div class="s">${s2}</div></div>`).join('')}</div>`;
+  h += `<div class="kpis">${[['Total reduced', f2(sum), ek.length + ' days'], ['Avg / day', ek.length ? f2(sum / ek.length) : '—', 'Cr'], ['Best day', best ? f2(eTot(S.eve[best])) : '—', best ? longDay(best).slice(0, -5) : ''], ['Accounts', ek.reduce((a, x) => a + eAcN(S.eve[x]), 0), 'reduced']].map(([l, v, s2], i) => `<div class="kpi" style="--c:${PAL[i]}"><div class="k">${l}</div><div class="v num">${v}</div><div class="s">${s2}</div></div>`).join('')}</div>`;
   if (mk.length > 1) { const vals = mk.map(x => mval(S.mor[x], 'ts')), mn = Math.min(...vals), mxx = Math.max(...vals), rg = (mxx - mn) || 1, W = 320, H = 110;
     const pts = vals.map((v, i) => [10 + i * (W - 20) / Math.max(1, vals.length - 1), 12 + (1 - (v - mn) / rg) * (H - 34)]);
-    h += `<section class="card chart"><div class="ch"><h3>Total SMA trend</h3><span>${f2(vals[0])} → ${f2(vals[vals.length - 1])}</span></div><svg viewBox="0 0 ${W} ${H}"><path d="M${pts.map(p => p.map(x => x.toFixed(1)).join(',')).join(' L')}" fill="none" stroke="url(#lg1)" stroke-width="2.5" stroke-linejoin="round" class="draw"/><defs><linearGradient id="lg1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#2ec5ff"/></linearGradient></defs>${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${i === pts.length - 1 ? 4 : 2.5}" fill="${i === pts.length - 1 ? '#2ec5ff' : '#7c5cff'}"/>`).join('')}<text x="10" y="${H - 4}" font-size="9" fill="var(--faint)">${short(mk[0])}</text><text x="${W - 10}" y="${H - 4}" font-size="9" fill="var(--faint)" text-anchor="end">${short(mk[mk.length - 1])}</text></svg>
+    h += `<section class="card chart"><div class="ch"><h3>Total SMA trend</h3><span>${f2(vals[0])} → ${f2(vals[vals.length - 1])}</span></div><svg viewBox="0 0 ${W} ${H}"><path d="M${pts.map(p => p.map(x => x.toFixed(1)).join(',')).join(' L')}" fill="none" stroke="url(#lg1)" stroke-width="${pts.length > 60 ? 1.2 : 2.5}" stroke-linejoin="round" class="draw"/><defs><linearGradient id="lg1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#2ec5ff"/></linearGradient></defs>${pts.filter((p, i) => pts.length <= 40 || i === pts.length - 1).map((p, i, arr) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${i === arr.length - 1 ? 4 : 2.5}" fill="${i === arr.length - 1 ? '#2ec5ff' : '#7c5cff'}"/>`).join('')}<text x="10" y="${H - 4}" font-size="9" fill="var(--faint)">${short(mk[0])}</text><text x="${W - 10}" y="${H - 4}" font-size="9" fill="var(--faint)" text-anchor="end">${short(mk[mk.length - 1])}</text></svg>
       <div class="small muted">Highest ${f2(mxx)} on ${short(mk[vals.indexOf(mxx)])} · lowest ${f2(mn)} on ${short(mk[vals.indexOf(mn)])}</div></section>`; }
   const mends = [...new Set(keys(S.mor).map(ym))].slice(-12).map(y => [y, refOf(y)]).filter(x => x[1]);
   if (mends.length > 2) { const vs = mends.map(([, r]) => mval(r, 'ts')), mxm = Math.max(...vs), bw = 300 / mends.length;
     h += `<section class="card chart"><div class="ch"><h3>Month-end Total SMA</h3><span>last ${mends.length} months</span></div><svg viewBox="0 0 320 130">${mends.map(([y], i) => { const v = vs[i], bh = Math.max(2, v / mxm * 84); return `<rect class="gb" style="animation-delay:${i * 30}ms" x="${(10 + i * bw + bw * .14).toFixed(1)}" y="${(104 - bh).toFixed(1)}" width="${(bw * .72).toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${i === mends.length - 1 ? '#7c5cff' : i && v < vs[i - 1] ? 'rgba(34,211,154,.75)' : 'rgba(255,95,114,.6)'}"/><text x="${(10 + i * bw + bw / 2).toFixed(1)}" y="${(100 - bh).toFixed(1)}" font-size="7.5" text-anchor="middle" fill="var(--muted)">${Math.round(v)}</text><text x="${(10 + i * bw + bw / 2).toFixed(1)}" y="118" font-size="8" text-anchor="middle" fill="var(--faint)">${MON[+y.slice(5, 7) - 1].slice(0, 3)}</text>`; }).join('')}</svg><div class="small muted">Green = lower than the month before · red = higher · purple = this month so far.</div></section>`; }
   if (ek.length) { const last = ek.slice(-20), mxv = Math.max(...last.map(x => eTot(S.eve[x]))), avgv = sum / ek.length, bw = 300 / last.length;
     h += `<section class="card chart"><div class="ch"><h3>Daily reduction</h3><span>dashed = average</span></div><svg viewBox="0 0 320 120">${last.map((x, i) => { const v = eTot(S.eve[x]), bh = Math.max(2, v / mxv * 86); return `<rect class="gb" style="animation-delay:${i * 25}ms" x="${(10 + i * bw + bw * .15).toFixed(1)}" y="${(96 - bh).toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${v >= avgv ? '#22d39a' : 'rgba(255,255,255,.22)'}"/><text x="${(10 + i * bw + bw / 2).toFixed(1)}" y="110" font-size="8" text-anchor="middle" fill="var(--faint)">${pk(x).getDate()}</text>`; }).join('')}<line x1="10" x2="310" y1="${(96 - avgv / mxv * 86).toFixed(1)}" y2="${(96 - avgv / mxv * 86).toFixed(1)}" stroke="#ffb020" stroke-dasharray="4 4"/></svg></section>`;
-    const ct = S.cats.map(c => [c, ek.reduce((a, x) => a + eAmt(S.eve[x], c.id), 0), ek.reduce((a, x) => a + eCnt(S.eve[x], c.id), 0)]), cm = Math.max(.01, ...ct.map(x => x[1]));
+    const ct = S.cats.map(c => [c, ek.reduce((a, x) => a + eAmt(S.eve[x], c.id), 0), ek.reduce((a, x) => a + eCntN(S.eve[x], c.id), 0)]), cm = Math.max(.01, ...ct.map(x => x[1]));
     h += `<section class="card"><div class="ch"><h3>By category</h3><span>₹ Cr · a/c</span></div>${ct.map(([c, v, a]) => `<div class="abar"><div class="row"><b>${c.e} ${esc(c.n)}</b><span><b class="num">${f2(v)}</b> <small class="muted">${a} a/c</small></span></div><div class="pbar"><i style="width:${(v / cm * 100).toFixed(1)}%"></i></div></div>`).join('')}</section>`;
     const months = [...new Set(keys(S.eve).map(ym))].reverse().slice(0, 6);
     h += `<section class="card"><div class="ch"><h3>Month by month</h3></div><table class="lvl"><tr><th style="text-align:left">Month</th><th>Total</th><th>Days</th><th>Avg</th><th>Best</th></tr>${months.map(y => { const ks = keys(S.eve).filter(x => ym(x) === y), t = ks.map(x => eTot(S.eve[x])), s2 = t.reduce((a, b) => a + b, 0); return `<tr><td style="text-align:left">${ymLong(y)}</td><td><b>${f2(s2)}</b></td><td>${ks.length}</td><td>${f2(s2 / ks.length)}</td><td>${f2(Math.max(...t))}</td></tr>`; }).join('')}</table></section>`; }
@@ -810,7 +823,7 @@ function sheetLook(){
 }
 const LBTNS = [['pri','Main buttons (Save · Share)','.btn.pri'],['btn','Other buttons','.btn:not(.pri)'],['chip','Selected tabs & chips','.seg button.on, .chip.on'],['fab','＋ Centre button','.fab'],['icon','Top icons','.icon-btn']];
 /* ===================== shareable image (canvas) ===================== */
-const IW = 540, SC = 2, FF = 'Roboto, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif';
+let IW = 540; const SC = 2, FF = 'Roboto, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif';
 const IC = {bg:'#0e0f13', card:'#16181f', line:'#262935', text:'#f2f4ff', muted:'#8b93b5', faint:'#5d6486', gd:'34,211,154', bd:'255,95,114'};
 function fnt(w, s){ return `${w} ${s}px ${FF}`; }
 function rr(c, x, y, w, h, r, fill, stroke){ c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.strokeStyle = stroke; c.lineWidth = 1; c.stroke(); } }
@@ -839,76 +852,138 @@ function kbox(c, x, y, w, h, lab, val, sub, subCol){ rr(c, x, y, w, h, 12, IC.ca
 function legend(c, y, l, r){ tx(c, l, 24, y + 4, fnt(500, 10), IC.muted); tx(c, r, IW - 24, y + 4, fnt(500, 10), IC.muted, 'right');
   c.font = fnt(500, 10); const x0 = 24 + c.measureText(l).width + 10, x1 = IW - 24 - c.measureText(r).width - 10, g = c.createLinearGradient(x0, 0, x1, 0);
   g.addColorStop(0, `rgb(${IC.bd})`); g.addColorStop(.42, `rgba(${IC.bd},.15)`); g.addColorStop(.5, 'rgba(255,255,255,.06)'); g.addColorStop(.58, `rgba(${IC.gd},.15)`); g.addColorStop(1, `rgb(${IC.gd})`); rr(c, x0, y - 3, x1 - x0, 6, 3, g); return y + 18; }
-function heatGrid(c, y, heads, rows, kind){
-  const bkW = 128, cw = (IW - 48 - bkW) / heads.length, rh = 50, all = rows.flatMap(r => r.d).filter(x => x != null), mx = Math.max(.01, ...all.map(Math.abs));
-  tx(c, rows.label || 'BUCKET', 28, y + 12, fnt(800, 9.5), IC.muted);
-  heads.forEach(([a, b], i) => { tx(c, a, 24 + bkW + cw * i + cw / 2, y + 12, fnt(800, 10), IC.muted, 'center'); tx(c, b, 24 + bkW + cw * i + cw / 2, y + 25, fnt(500, 9.5), IC.faint, 'center'); });
+function heatGrid(c, y, heads, rows, kind, label){
+  const bkW = 104, cw = (IW - 48 - bkW) / heads.length, rh = 50, mx = Math.max(.01, ...rows.flatMap(r => (r.cells || []).filter(x => x.t === 'd' && x.d != null).map(x => Math.abs(x.d))));
+  tx(c, label || 'BUCKET', 28, y + 12, fnt(800, 9.5), IC.muted);
+  heads.forEach(([a, b], i) => { tx(c, a, 24 + bkW + cw * i + cw / 2, y + 12, fnt(800, 10), i === 0 ? '#b9a8ff' : IC.muted, 'center'); tx(c, b, 24 + bkW + cw * i + cw / 2, y + 25, fnt(500, 9.5), IC.faint, 'center'); });
   y += 32;
   rows.forEach(r => {
     if (r.gap) { y += 8; return; }
     if (r.tot) rr(c, 20, y, IW - 40, rh, 10, 'rgba(124,92,255,.10)');
-    tx(c, fit(c, r.n, bkW - 10, fnt(800, 14)), 28, y + 22, fnt(800, 14), IC.text); tx(c, r.s, 28, y + 39, fnt(600, 11.5), IC.muted);
-    r.d.forEach((d, i) => { const [bg, col] = heatC(d, kind, mx), x = 24 + bkW + cw * i; rr(c, x + 3, y + 4, cw - 6, rh - 8, 9, bg); tx(c, dtxt(d).replace(' ', ''), x + cw / 2, y + rh / 2 + 6, fnt(800, 15), col, 'center'); });
+    tx(c, fit(c, r.n, bkW - 8, fnt(800, 14)), 28, y + rh / 2 + 5, fnt(800, 14), IC.text);
+    r.cells.forEach((cl, i) => { const x = 24 + bkW + cw * i;
+      if (cl.t === 'd') { const [bg, col] = heatC(cl.d, kind, mx); rr(c, x + 3, y + 4, cw - 6, rh - 8, 9, bg); tx(c, dtxt(cl.d).replace(' ', ''), x + cw / 2, y + rh / 2 + 5, fnt(800, 14.5), col, 'center'); return; }
+      const td = cl.t === 'today'; rr(c, x + 3, y + 4, cw - 6, rh - 8, 9, td ? 'rgba(124,92,255,.26)' : 'rgba(255,255,255,.06)', td ? 'rgba(160,140,255,.55)' : null);
+      if (cl.sub) { tx(c, cl.txt, x + cw / 2, y + 23, fnt(800, 14.5), '#fff', 'center'); tx(c, cl.sub, x + cw / 2, y + 37, fnt(600, 9.5), td ? '#cfc6ff' : IC.muted, 'center'); }
+      else tx(c, cl.txt, x + cw / 2, y + rh / 2 + 5, fnt(800, 14.5), td ? '#fff' : '#d8dcf2', 'center'); });
     y += rh;
   });
   return y;
 }
+function callouts(c, y, good, bad){ if (!good && !bad) return y; const w2 = (IW - 48 - 8) / 2;
+  [[good, 'BEST MOVE', IC.gd], [bad, 'WATCH', IC.bd]].forEach(([x, l, rgb], i) => { const xx = 24 + i * (w2 + 8); if (!x) return; rr(c, xx, y, w2, 52, 11, `rgba(${rgb},.09)`, `rgba(${rgb},.32)`); tx(c, l, xx + 12, y + 19, fnt(800, 9.5), `rgb(${rgb})`); tx(c, fit(c, x, w2 - 24, fnt(800, 14)), xx + 12, y + 40, fnt(800, 14), IC.text); });
+  return y + 66; }
 function finish(cv, c, h){ const out = document.createElement('canvas'); out.width = IW * SC; out.height = Math.ceil(h * SC); out.getContext('2d').drawImage(cv, 0, 0); return out; }
-function newCv(){ const cv = document.createElement('canvas'); cv.width = IW * SC; cv.height = 2400 * SC; const c = cv.getContext('2d'); c.scale(SC, SC);
+function newCv(w){ IW = w || 540; const cv = document.createElement('canvas'); cv.width = IW * SC; cv.height = 2400 * SC; const c = cv.getContext('2d'); c.scale(SC, SC);
   c.fillStyle = IC.bg; c.fillRect(0, 0, IW, 2400); const g = c.createRadialGradient(0, 0, 10, 0, 0, 420); g.addColorStop(0, 'rgba(124,92,255,.16)'); g.addColorStop(1, 'rgba(124,92,255,0)'); c.fillStyle = g; c.fillRect(0, 0, IW, 600); return [cv, c]; }
 
+function hx(h, a){ h = h.replace('#', ''); return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${a})`; }
+function grad(c, x0, y0, x1, y1, stops){ const g = c.createLinearGradient(x0, y0, x1, y1); stops.forEach(([o, col]) => g.addColorStop(o, col)); return g; }
+function sparkC(c, vals, x, y, w, h, col){ const v = vals.filter(n => n != null); if (v.length < 2) return false; const mn = Math.min(...v), mx = Math.max(...v), rg = (mx - mn) || 1;
+  const pts = vals.map((n, i) => n == null ? null : [x + i * w / (vals.length - 1), y + h - 3 - (n - mn) / rg * (h - 6)]).filter(Boolean); if (mx - mn < .005) return false;
+  c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.lineTo(pts[pts.length - 1][0], y + h); c.lineTo(pts[0][0], y + h); c.closePath(); c.fillStyle = hx(col, .14); c.fill();
+  c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.strokeStyle = col; c.lineWidth = 1.7; c.lineJoin = 'round'; c.stroke();
+  const L = pts[pts.length - 1]; c.beginPath(); c.arc(L[0], L[1], 2.8, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill(); return true; }
 function drawMorning(k){
-  const M = morCalc(k); if (!M) return null; const [cv, c] = newCv(); let y = 26;
-  y = header(c, y, 'SMA & NPA Heatmap', `Consolidated · ${S.settings.group} · ₹ in Crore`, k, `rgb(${IC.gd})`, `rgb(${IC.bd})`);
-  const T = M.sma[3], N = M.npa[M.npa.length - 1], w3 = (IW - 48 - 16) / 3;
-  kbox(c, 24, y, w3, 78, 'Total SMA', f2(T.v), T.dod == null ? 'no previous day' : dtxt(T.dod) + '  DoD', dcol(T.dod, 'risk'));
-  kbox(c, 24 + w3 + 8, y, w3, 78, `vs ${ymLab(M.B.y)}`, T.by == null ? '—' : f2(T.by), T.ytd == null ? 'not entered' : dtxt(T.ytd) + '  YTD', dcol(T.ytd, 'risk'));
-  kbox(c, 24 + 2 * (w3 + 8), y, w3, 78, 'NPA', f2(N.v), N.dod == null ? 'no previous day' : dtxt(N.dod) + '  DoD', dcol(N.dod, 'risk'));
-  y += 92;
-  const rows = M.sma.map(r => ({n:r.n, s:f2(r.v), d:[r.dod, r.mtd, r.qtd, r.ytd], tot:r.id === 'ts'})).concat([{gap:true}], M.npa.map(r => ({n:r.n, s:f2(r.v), d:[r.dod, r.mtd, r.qtd, r.ytd], tot:r.id === 'tn'})));
-  y = heatGrid(c, y, [['DoD', M.pv ? 'vs ' + short(M.pv) : '—'], ['MTD', 'vs ' + ymLab(M.B.m)], ['QTD', 'vs ' + ymLab(M.B.q)], ['YTD', 'vs ' + ymLab(M.B.y)]], rows, 'risk');
+  const M = morCalc(k); if (!M) return null; const [cv, c] = newCv(980); let y = 26;
+  // aurora background
+  [[0, 0, 'rgba(255,79,163,.22)'], [IW, 0, 'rgba(124,92,255,.26)'], [IW / 2, 1400, 'rgba(46,197,255,.14)']].forEach(([gx, gy, col]) => { const g = c.createRadialGradient(gx, gy, 10, gx, gy, 560); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, IW, 2400); });
+  // header
+  rr(c, 24, y + 2, 5, 44, 3, grad(c, 0, y, 0, y + 46, [[0, '#ff4fa3'], [.5, '#7c5cff'], [1, '#2ec5ff']]));
+  c.font = fnt(800, 24); const tw = c.measureText('SMA & NPA Position').width; tx(c, 'SMA & NPA Position', 40, y + 24, fnt(800, 24), grad(c, 40, 0, 40 + tw, 0, [[0, '#ff7ac0'], [.5, '#b9a8ff'], [1, '#6fdcff']]));
+  tx(c, `Consolidated · ${S.settings.group} · data as on ${k.split('-').reverse().join('-')} · ₹ in Crore`, 40, y + 44, fnt(500, 12.5), IC.muted);
+  const d0 = pk(k); rr(c, IW - 24 - 104, y - 4, 104, 62, 12, grad(c, IW - 128, y, IW - 24, y + 60, [[0, '#ff4fa3'], [.55, '#7c5cff'], [1, '#2ec5ff']]));
+  tx(c, String(d0.getDate()), IW - 76, y + 24, fnt(800, 26), '#fff', 'center'); tx(c, `${MON[d0.getMonth()].toUpperCase()} ${d0.getFullYear()}`, IW - 76, y + 39, fnt(800, 10.5), '#fff', 'center'); tx(c, WDL[d0.getDay()], IW - 76, y + 52, fnt(600, 10.5), '#ffe9f6', 'center');
+  y += 76;
+  // KPI boxes: green/red vertical edge only here
+  const T = M.sma[3], N = M.npa[M.npa.length - 1], w4 = (IW - 48 - 24) / 4;
+  [['Total SMA', T.v, T.dod, 'GDD'], [`SMA at ${ymLab(M.B.m)}`, T.bm, T.mtd, 'MTD'], ['Total NPA', N.v, N.dod, 'GDD'], [`NPA at ${ymLab(M.B.y)}`, N.by, N.ytd, 'YTD']].forEach(([l, v, d, p], i) => {
+    const x = 24 + i * (w4 + 8), col = dcol(d, 'risk'); rr(c, x, y, w4, 84, 14, 'rgba(255,255,255,.055)', 'rgba(255,255,255,.10)');
+    c.save(); c.beginPath(); c.moveTo(x + 14, y); c.arcTo(x, y, x, y + 14, 14); c.lineTo(x, y + 70); c.arcTo(x, y + 84, x + 14, y + 84, 14); c.lineTo(x + 4, y + 84); c.lineTo(x + 4, y); c.closePath(); c.clip(); c.fillStyle = d == null || Math.abs(d) < .005 ? '#5d6486' : col; c.fillRect(x, y, 4, 84); c.restore();
+    tx(c, l.toUpperCase(), x + 16, y + 20, fnt(800, 9.5), IC.muted); tx(c, v == null ? '—' : f2(v), x + 16, y + 49, fnt(800, 24), IC.text);
+    const bt = d == null ? 'no data' : `${dtxt(d)} ${p}`; c.font = fnt(800, 11); const bw = c.measureText(bt).width + 16, pc = d == null || Math.abs(d) < .005 ? '#8b93b5' : col;
+    rr(c, x + 16, y + 58, bw, 19, 9.5, d == null || Math.abs(d) < .005 ? 'rgba(139,147,181,.14)' : (goodOf(d, 'risk') ? `rgba(${IC.gd},.14)` : `rgba(${IC.bd},.14)`), d == null || Math.abs(d) < .005 ? 'rgba(139,147,181,.35)' : (goodOf(d, 'risk') ? `rgba(${IC.gd},.4)` : `rgba(${IC.bd},.4)`)); tx(c, bt, x + 24, y + 71.5, fnt(800, 11), pc); });
+  y += 100;
+  // 10-day history
+  const hk = keys(S.mor).filter(x => x <= k).slice(-10), hv = id => hk.map(x => mval(S.mor[x], id));
+  const lab = 92, cw = (IW - 48 - lab) / 9, rh = 46, x0 = 24 + lab, xT = x0 + 4 * cw, xm = xT + cw;
+  const LC = ['#ff6fb5', '#a98bff', '#4fd3ff'], heads = [['YEAR', ymLong(M.B.y).replace(' 20', '-')], ['QUARTER', ymLong(M.B.q).replace(' 20', '-')], ['MONTH', ymLong(M.B.m).replace(' 20', '-')], ['TODAY', short(k)]];
+  const block = (title, rows, scale) => {
+    rr(c, x0 + 3, y, 4 * cw - 6, 24, 8, grad(c, x0, 0, xT, 0, [[0, 'rgba(255,79,163,.24)'], [.5, 'rgba(124,92,255,.24)'], [1, 'rgba(46,197,255,.2)']])); tx(c, 'LEVELS · ₹ CRORE', x0 + 2 * cw, y + 16, fnt(800, 10), '#fff', 'center');
+    rr(c, xT + 3, y, cw - 6, 24, 8, 'rgba(46,197,255,.16)'); tx(c, `${hk.length} DAYS`, xT + cw / 2, y + 16, fnt(800, 10), '#8fe6ff', 'center');
+    rr(c, xm + 3, y, 4 * cw - 6, 24, 8, grad(c, xm, 0, xm + 4 * cw, 0, [[0, `rgba(${IC.bd},.2)`], [1, `rgba(${IC.gd},.2)`]])); tx(c, 'MOVEMENT', xm + 2 * cw, y + 16, fnt(800, 10), '#e8eaff', 'center');
+    y += 34; tx(c, title, 28, y + 10, fnt(800, 10), IC.muted);
+    heads.forEach(([a, b], i) => { tx(c, a, x0 + cw * i + cw / 2, y + 10, fnt(800, 10.5), i === 3 ? '#ff9ad2' : LC[i], 'center'); tx(c, b, x0 + cw * i + cw / 2, y + 23, fnt(500, 9), IC.faint, 'center'); });
+    tx(c, hk.length ? `${short(hk[0])} → ${short(hk[hk.length - 1])}` : '—', xT + cw / 2, y + 10, fnt(800, 9.5), IC.muted, 'center');
+    [['YTD', ymLab(M.B.y)], ['QTD', ymLab(M.B.q)], ['MTD', ymLab(M.B.m)], ['GDD', M.pv ? short(M.pv) : '—']].forEach(([a, b], i) => { tx(c, a, xm + cw * i + cw / 2, y + 10, fnt(800, 10.5), IC.muted, 'center'); tx(c, 'vs ' + b, xm + cw * i + cw / 2, y + 23, fnt(500, 9), IC.faint, 'center'); });
+    y += 32;
+    rows.forEach(r => {
+      if (r.tot) { rr(c, 20, y, IW - 40, rh, 10, grad(c, 20, 0, IW - 20, 0, [[0, 'rgba(255,79,163,.12)'], [.5, 'rgba(124,92,255,.12)'], [1, 'rgba(46,197,255,.08)']])); c.fillStyle = 'rgba(255,140,210,.35)'; c.fillRect(20, y, IW - 40, 2); }
+      tx(c, r.lab, 28, y + (r.tot ? 21 : 28), fnt(800, r.tot ? 15.5 : 14.5), IC.text); if (r.tot) tx(c, r.sub, 28, y + 35, fnt(600, 9.5), IC.muted);
+      [r.by, r.bq, r.bm, r.v].forEach((v, i) => { const x = x0 + cw * i, td = i === 3;
+        rr(c, x + 3, y + 4, cw - 6, rh - 8, 9, td ? grad(c, x, y, x + cw, y + rh, [[0, 'rgba(255,79,163,.55)'], [1, 'rgba(124,92,255,.55)']]) : grad(c, x, y, x + cw, y + rh, [[0, hx(LC[i], .42)], [1, hx(LC[i], .16)]]), td ? 'rgba(255,180,230,.6)' : hx(LC[i], .45));
+        tx(c, v == null ? '—' : f2(v), x + cw / 2, y + rh / 2 + 5, fnt(800, 15), '#fff', 'center'); });
+      rr(c, xT + 4, y + 4, cw - 8, rh - 8, 9, 'rgba(46,197,255,.06)', 'rgba(46,197,255,.18)');
+      if (!sparkC(c, hv(r.id), xT + 12, y + 10, cw - 24, rh - 20, '#ff9ad2')) tx(c, 'steady', xT + cw / 2, y + rh / 2 + 4, fnt(500, 10.5), IC.faint, 'center');
+      [r.ytd, r.qtd, r.mtd, r.dod].forEach((d, i) => { const [bg, col] = heatC(d, 'risk', scale), x = xm + cw * i; rr(c, x + 3, y + 4, cw - 6, rh - 8, 9, bg, d != null && Math.abs(d) >= .005 ? (goodOf(d, 'risk') ? `rgba(${IC.gd},.5)` : `rgba(${IC.bd},.5)`) : null); tx(c, dtxt(d).replace(' ', ''), x + cw / 2, y + rh / 2 + 5, fnt(800, 15), col, 'center'); });
+      y += rh; });
+  };
+  const scl = rs => Math.max(.01, ...rs.flatMap(r => [r.ytd, r.qtd, r.mtd, r.dod]).filter(x => x != null).map(Math.abs));
+  const smaS = scl(M.sma), npaS = scl(M.npa);
+  block('SMA', M.sma.map(r => ({...r, lab:r.id === 'ts' ? 'Total' : r.n, tot:r.id === 'ts', sub:'SMA 0+1+2'})), smaS);
+  y += 14;
+  block('NPA', M.npa.map(r => ({...r, lab:r.id === 'tn' ? 'Total' : r.n, tot:r.id === 'tn', sub:'REG 01+09'})), npaS);
   y = legend(c, y + 14, S.settings.colour === 'sign' ? 'Minus' : 'Adverse', S.settings.colour === 'sign' ? 'Plus' : 'Favourable');
-  if (M.same.some(Boolean)) { tx(c, 'TOTAL SMA · SAME DAY, EARLIER MONTHS', 24, y + 8, fnt(800, 9.5), IC.muted); y += 16; const w3b = (IW - 48 - 16) / 3;
-    M.same.forEach((sm, i) => { const xx = 24 + i * (w3b + 8); rr(c, xx, y, w3b, 50, 10, IC.card, IC.line); if (!sm) { tx(c, `${i + 1} month${i ? 's' : ''} ago · —`, xx + 10, y + 30, fnt(600, 11), IC.faint); return; }
-      tx(c, `${short(sm.k)} · ${f2(sm.v)}`, xx + 10, y + 20, fnt(700, 11), IC.muted); tx(c, dtxt(sm.d) + ' now', xx + 10, y + 39, fnt(800, 13.5), dcol(sm.d, 'risk')); }); y += 64; }
-  // callouts
-  const cells = M.sma.slice(0, 3).flatMap(r => [['DoD', r.dod], ['MTD', r.mtd]].filter(x => x[1] != null && Math.abs(x[1]) >= .005).map(([p, d]) => ({n:r.n, p, d})));
-  const good = cells.filter(x => goodOf(x.d, 'risk')).sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0], bad = cells.filter(x => !goodOf(x.d, 'risk')).sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0];
-  if (good || bad) { const w2 = (IW - 48 - 8) / 2; [[good, 'BEST MOVE', IC.gd], [bad, 'WATCH', IC.bd]].forEach(([x, l, rgb], i) => { if (!x) return; const xx = 24 + i * (w2 + 8); rr(c, xx, y, w2, 52, 11, `rgba(${rgb},.09)`, `rgba(${rgb},.32)`); tx(c, l, xx + 12, y + 19, fnt(800, 9.5), `rgb(${rgb})`); tx(c, `${x.n}  ${dtxt(x.d)}  ${x.p}`, xx + 12, y + 40, fnt(800, 14), IC.text); }); y += 66; }
+  tx(c, `Shade is scaled within each block — SMA against its biggest move (±${f2(smaS)}), NPA against its own (±${f2(npaS)})`, 24, y + 2, fnt(500, 10), IC.muted); y += 14;
+  // same day earlier months
+  if (M.same.some(Boolean)) { tx(c, 'TOTAL SMA · SAME DAY, EARLIER MONTHS', 24, y + 10, fnt(800, 9.5), IC.muted); y += 18; const w3b = (IW - 48 - 16) / 3;
+    M.same.forEach((sm, i) => { const xx = 24 + i * (w3b + 8); rr(c, xx, y, w3b, 52, 12, 'rgba(255,255,255,.04)', 'rgba(255,255,255,.08)'); if (!sm) { tx(c, `${i + 1} month${i ? 's' : ''} ago · —`, xx + 12, y + 31, fnt(600, 11), IC.faint); return; }
+      tx(c, `${short(sm.k)} · ${f2(sm.v)}`, xx + 12, y + 21, fnt(700, 11), IC.muted); tx(c, dtxt(sm.d) + ' now', xx + 12, y + 41, fnt(800, 14.5), dcol(sm.d, 'risk')); }); y += 64; }
+  // call-outs with context
+  const cells = M.sma.slice(0, 3).flatMap(r => [['YTD', r.ytd], ['QTD', r.qtd], ['MTD', r.mtd], ['GDD', r.dod]].filter(x => x[1] != null && Math.abs(x[1]) >= .005).map(([p, d]) => ({r, p, d})));
+  const fav = cells.filter(x => goodOf(x.d, 'risk')), adv = cells.filter(x => !goodOf(x.d, 'risk'));
+  const good = fav.filter(x => x.p === 'GDD').sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0] || fav.sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0];
+  let gtxt = good && `${good.r.n}  ${dtxt(good.d)}  ${good.p}`; if (good) { const h = hv(good.r.id).filter(v => v != null); if (h.length >= 5 && good.r.v <= Math.min(...h)) gtxt += `  · lowest in ${h.length} days`; }
+  const runs = M.sma.slice(0, 3).map(r => { const h = hv(r.id); let n = 0; for (let i = h.length - 1; i > 0 && h[i] != null && h[i - 1] != null && h[i] - h[i - 1] > .005; i--) n++; return {r, n}; }).filter(x => x.n >= 2).sort((a, b) => b.n - a.n)[0];
+  const bad = adv.sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0];
+  const btxt = runs ? `${runs.r.n} rising ${runs.n} days  · ${dtxt(runs.r.dod)} GDD` : bad && `${bad.r.n}  ${dtxt(bad.d)}  ${bad.p}  · biggest adverse move`;
+  y = callouts(c, y + 4, gtxt, btxt);
   y = footer(c, y + 4, Date.now());
   return finish(cv, c, y + 10);
 }
 function drawEvening(k, mode){
-  const Ev = eveCalc(k); if (!Ev) return null; const [cv, c] = newCv(); let y = 26;
-  y = header(c, y, 'SMA Reduction', mode === 'compare' ? 'Daily recovery · comparison · ₹ in Crore' : `${S.settings.tag} · ₹ in Crore`, k, '#ffb020', `rgb(${IC.gd})`);
+  const Ev = eveCalc(k); if (!Ev) return null; const [cv, c] = newCv(540); let y = 26;
+  y = header(c, y, 'SMA Reduction', mode === 'compare' ? `Daily recovery · comparison · ₹ in Crore` : `Daily recovery · ${S.settings.tag} · ₹ in Crore`, k, '#ffb020', `rgb(${IC.gd})`);
+  const w3 = (IW - 48 - 16) / 3, CT = catsOf(Ev.r), acOk = Ev.ac !== '—';
+  kbox(c, 24, y, w3, 78, `Reduced · ${totLabel()}`, f2(Ev.tot), mode === 'compare' && acOk ? `${Ev.ac} accounts` : '₹ in Crore');
   if (mode === 'compare') {
-    rr(c, 24, y, 290, 92, 12, IC.card, IC.line); tx(c, `REDUCED TODAY · ${totLabel().toUpperCase()}`, 36, y + 21, fnt(800, 9.5), IC.muted); tx(c, f2(Ev.tot), 36, y + 60, fnt(800, 34), IC.text); tx(c, `${Ev.ac} accounts`, 36, y + 80, fnt(600, 11.5), IC.muted);
-    const x2 = 24 + 298, w2 = IW - 24 - x2; rr(c, x2, y, w2, 92, 12, IC.card, IC.line); tx(c, 'MONTH TO DATE', x2 + 12, y + 21, fnt(800, 9.5), IC.muted); tx(c, f2(Ev.mtd.sum), x2 + 12, y + 50, fnt(800, 23), IC.text);
-    const ds = Ev.mtd.days.slice(-14), mv = Math.max(.01, ...ds.map(x => eTot(S.eve[x]))), bw = (w2 - 24) / Math.max(ds.length, 6);
-    ds.forEach((x, i) => { const v = eTot(S.eve[x]), bh = Math.max(2, v / mv * 20); rr(c, x2 + 12 + i * bw, y + 80 - bh, Math.max(3, bw - 3), bh, 2, x === k ? `rgb(${IC.gd})` : 'rgba(255,255,255,.22)'); });
-    tx(c, `${Ev.mtd.n} day${Ev.mtd.n === 1 ? '' : 's'}`, IW - 36, y + 21, fnt(600, 10), IC.faint, 'right');
-    y += 106;
-    const rows = S.cats.map(cat => ({n:cat.n, s:`${f2(eAmt(Ev.r, cat.id))} · ${eCnt(Ev.r, cat.id)} a/c`, d:Ev.cmp.map(([, ck]) => ck ? eAmt(Ev.r, cat.id) - eAmt(S.eve[ck], cat.id) : null)}))
-      .concat([{n:'Total', s:`${f2(Ev.tot)} · ${Ev.ac} a/c`, d:Ev.cmp.map(([, ck]) => ck ? Ev.tot - eTot(S.eve[ck]) : null), tot:true}]); rows.label = 'CATEGORY';
-    y = heatGrid(c, y, Ev.cmp.map(([l, ck]) => [l, ck ? 'vs ' + short(ck) : 'no data']), rows, 'rec');
+    const av = Ev.mtd.n ? Ev.mtd.sum / Ev.mtd.n : null, dAv = av != null && Ev.mtd.n > 1 ? Ev.tot - av : null;
+    kbox(c, 24 + w3 + 8, y, w3, 78, 'Month to date', f2(Ev.mtd.sum), `${Ev.mtd.n} day${Ev.mtd.n === 1 ? '' : 's'}${acOk ? ' · ' + Ev.mtd.ac + ' a/c' : ''}`);
+    kbox(c, 24 + 2 * (w3 + 8), y, w3, 78, 'Avg / day · month', av == null ? '—' : f2(av), dAv == null ? 'first day of month' : `today ${dtxt(dAv)}`, dcol(dAv, 'rec'));
+    y += 92;
+    const rows = CT.map(cat => ({n:cat.n, cells:[{t:'today', txt:f2(eAmt(Ev.r, cat.id)), sub:acOk ? eCnt(Ev.r, cat.id) + ' a/c' : ''}].concat(Ev.cmp.map(([, ck]) => ({t:'d', d:ck ? eAmt(Ev.r, cat.id) - eAmt(S.eve[ck], cat.id) : null})))}))
+      .concat([{n:'Total', tot:true, cells:[{t:'today', txt:f2(Ev.tot), sub:acOk ? Ev.ac + ' a/c' : ''}].concat(Ev.cmp.map(([, ck]) => ({t:'d', d:ck ? Ev.tot - eTot(S.eve[ck]) : null})))}]);
+    y = heatGrid(c, y, [['TODAY', '₹ Cr'], ...Ev.cmp.map(([l, ck]) => [l.toUpperCase(), ck ? 'vs ' + short(ck) : 'no data'])], rows, 'rec', 'CATEGORY');
     y = legend(c, y + 14, S.settings.colour === 'sign' ? 'Minus' : 'Lower than', S.settings.colour === 'sign' ? 'Plus' : 'Higher than');
+    const pv = Ev.cmp[0][1];
+    if (pv) { const ds = CT.map(cat => ({n:cat.n, d:eAmt(Ev.r, cat.id) - eAmt(S.eve[pv], cat.id)})).filter(x => Math.abs(x.d) >= .005), g = ds.filter(x => goodOf(x.d, 'rec')).sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0], b = ds.filter(x => !goodOf(x.d, 'rec')).sort((a, b2) => Math.abs(b2.d) - Math.abs(a.d))[0];
+      y = callouts(c, y, g && `${g.n}  ${dtxt(g.d)}  vs prev day`, b && `${b.n}  ${dtxt(b.d)}  vs prev day`); }
   } else {
-    const g = c.createLinearGradient(24, y, IW - 24, y + 100); g.addColorStop(0, 'rgba(255,176,32,.20)'); g.addColorStop(1, `rgba(${IC.gd},.14)`);
-    rr(c, 24, y, IW - 48, 96, 14, g, 'rgba(255,255,255,.10)'); tx(c, `REDUCED TODAY · ${totLabel().toUpperCase()}`, 38, y + 23, fnt(800, 10), '#ffd98a');
-    tx(c, f2(Ev.tot), 38, y + 68, fnt(800, 40), IC.text); c.font = fnt(800, 40); const w = c.measureText(f2(Ev.tot)).width; tx(c, `Cr · ${Ev.ac} a/c`, 46 + w, y + 68, fnt(700, 15), IC.muted);
-    y += 112; const mx = Math.max(.01, ...S.cats.map(cat => eAmt(Ev.r, cat.id)));
-    S.cats.forEach((cat, ci) => { const v = eAmt(Ev.r, cat.id);
-      tx(c, cat.n, 28, y + 20, fnt(800, 15), IC.text); tx(c, f2(v), IW - 104, y + 20, fnt(800, 17), IC.text, 'right'); tx(c, `${eCnt(Ev.r, cat.id)} a/c`, IW - 28, y + 20, fnt(600, 12), IC.muted, 'right');
-      rr(c, 28, y + 30, IW - 56, 7, 4, 'rgba(255,255,255,.07)'); if (v > 0) { const gg = c.createLinearGradient(28, 0, IW - 28, 0); gg.addColorStop(0, '#ffb020'); gg.addColorStop(1, `rgb(${IC.gd})`); rr(c, 28, y + 30, Math.max(7, (IW - 56) * v / mx), 7, 4, gg); }
-      if (ci < S.cats.length - 1) { c.fillStyle = IC.line; c.fillRect(24, y + 48, IW - 48, 1); } y += 50; });
-    y += 4;
+    const top = CT.slice().sort((a, b) => eAmt(Ev.r, b.id) - eAmt(Ev.r, a.id))[0];
+    kbox(c, 24 + w3 + 8, y, w3, 78, 'Accounts', acOk ? String(Ev.ac) : '—', acOk ? 'in ' + totLabel() : 'not recorded');
+    kbox(c, 24 + 2 * (w3 + 8), y, w3, 78, 'Top category', top ? f2(eAmt(Ev.r, top.id)) : '—', top ? top.n : '');
+    y += 92;
+    const rows = CT.map(cat => ({n:cat.n, cells:[{t:'today', txt:f2(eAmt(Ev.r, cat.id))}, {t:'n', txt:acOk ? String(eCnt(Ev.r, cat.id)) : '—'}, {t:'n', txt:Ev.tot ? Math.round(eAmt(Ev.r, cat.id) / Ev.tot * 100) + '%' : '—'}]}))
+      .concat([{n:'Total', tot:true, cells:[{t:'today', txt:f2(Ev.tot)}, {t:'n', txt:acOk ? String(Ev.ac) : '—'}, {t:'n', txt:'100%'}]}]);
+    y = heatGrid(c, y, [['TODAY', '₹ Cr'], ['ACCOUNTS', 'No.'], ['SHARE', 'of total']], rows, 'rec', 'CATEGORY');
+    y += 6;
   }
   y = footer(c, y + 8, Date.now());
   return finish(cv, c, y + 10);
 }
 function shareText(m, k, mode){
   if (m === 'eve') { const r = S.eve[k], Ev = eveCalc(k);
-    let t = `SMA Reduction As on ${dotD(k)} (${S.settings.tag})\n\n` + S.cats.map(c => `${c.n}: ${f2(eAmt(r, c.id))} Cr, ${eCnt(r, c.id)} A/c`).join('\n') + `\n\nTotal (${totLabel()}): ${f2(Ev.tot)} Cr, ${Ev.ac} A/c`;
+    let t = `SMA Reduction As on ${dotD(k)} (${S.settings.tag})\n\n` + catsOf(r).map(c => `${c.n}: ${f2(eAmt(r, c.id))} Cr${r.noac ? '' : `, ${eCnt(r, c.id)} A/c`}`).join('\n') + `\n\nTotal (${totLabel()}): ${f2(Ev.tot)} Cr${r.noac ? '' : `, ${Ev.ac} A/c`}`;
     if (mode === 'compare') Ev.cmp.forEach(([l, ck]) => { if (ck) { const d = Ev.tot - eTot(S.eve[ck]); t += `\nvs ${l} (${short(ck)}): ${d >= 0 ? '+' : '−'}${f2(Math.abs(d))} Cr`; } });
     if (Ev.mtd.n > 1) t += `\nMonth to date: ${f2(Ev.mtd.sum)} Cr (${Ev.mtd.n} days)`; return t; }
   const M = morCalc(k), ln = r => `${r.n}: ${f2(r.v)} (DoD ${r.dod == null ? '—' : (r.dod >= 0 ? '+' : '−') + f2(Math.abs(r.dod))} | MTD ${r.mtd == null ? '—' : (r.mtd >= 0 ? '+' : '−') + f2(Math.abs(r.mtd))} | QTD ${r.qtd == null ? '—' : (r.qtd >= 0 ? '+' : '−') + f2(Math.abs(r.qtd))} | YTD ${r.ytd == null ? '—' : (r.ytd >= 0 ? '+' : '−') + f2(Math.abs(r.ytd))})`;
